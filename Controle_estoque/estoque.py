@@ -27,6 +27,7 @@ def adicionar_produto():
     global estoque
     print("\n--- NOVO PRODUTO ---")
     nome = input('Digite o nome do produto: ')
+    codigo = input('Digite o código unico do produto: ').strip().upper()
 
     try:
         preco = float(input('Digite o preço: '))
@@ -35,10 +36,33 @@ def adicionar_produto():
         print("\n[ERRO] Preço e Quantidade devem ser números válidos. Cadastro cancelado.")
         return
 
-    roupa = {'nome':nome,'preco':preco,'qtd':qtd}
+    roupa = {'codigo':codigo, 'nome':nome, 'preco':preco, 'qtd':qtd}
     estoque.append(roupa)
     print(f"\n✅ Produto '{nome}' adicionado com sucesso!")
 
+def registrar_saida():
+    global estoque
+    print("\n-- REGISTRAR VENDA ---")
+    
+    #Aqui o scanner atuara
+    codigo_saida = input('Digite/Leia o código do produto: ').strip().upper()
+
+    #Percorre o estoque pra buscar o item
+    for item in estoque:
+
+        #se o código do item no estoque for igual ao codigo digitado
+        if item ['codigo'] == codigo_saida:
+
+            #verifica o estoque
+            if item ['qtd'] > 0:
+                item ['qtd'] -= 1
+                print(f"\n VENDA REGISTRADA: {item['nome']}")
+                print(f"   Estoque atual: {item['qtd']} unidades.")
+                return
+            else:
+                print(f"\n ERRO: {item['nome']} (Código: {codigo_saida}) está zerado no estoque.")
+                return
+    print(f"\n ERRO: Código: {codigo_saida} não encontrado no estoque.")
 
 def visualizar_estoque():
     if not estoque:
@@ -59,7 +83,8 @@ def main():
         print('\n--- MENU ---')
         print('1. Cadastrar Produto')
         print('2. Visualizar Estoque')
-        print('3. Sair')
+        print('3 Registrar Venda')
+        print('4. Sair')
         opcao = input('Escolha: ')
 
         if opcao == '1':
@@ -67,6 +92,8 @@ def main():
         elif opcao == '2':
             visualizar_estoque()
         elif opcao == '3':
+            registrar_saida()
+        elif opcao == '4':
             salvar_estoque()
             print('Saindo do sistema...')
             break
