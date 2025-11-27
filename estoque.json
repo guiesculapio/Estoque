@@ -1,0 +1,20 @@
+[
+    {
+        "codigo": "151515",
+        "nome": "Camiseta branca nike P",
+        "preco": 49.99,
+        "qtd": 6
+    },
+    {
+        "codigo": "161616",
+        "nome": "Bermuda nike preta G",
+        "preco": 59.99,
+        "qtd": 9
+    },
+    {
+        "codigo": "101010",
+        "nome": "Camiseta Preta Adidas M",
+        "preco": 49.99,
+        "qtd": 10
+    }
+]
