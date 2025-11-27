@@ -1,2 +1,2 @@
-# Estoque
+# Inventory Control System
 
