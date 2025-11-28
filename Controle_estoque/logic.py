@@ -1,90 +1,108 @@
 import json
 import os 
 
+# --- Persistência de Dados (JSON File) ---
+
 def carregar_estoque():
+    """Tenta carregar o estoque do arquivo JSON. Retorna uma lista vazia em caso de erro ou arquivo não existente."""
     nome_arquivo = 'estoque.json'
     
-    #1. Checks if the file exists AND if it has content (size > 0)
     if os.path.exists(nome_arquivo) and os.path.getsize(nome_arquivo) > 0:
         try:
             with open(nome_arquivo, 'r') as arquivo:
+                # O arquivo JSON guarda uma lista de produtos
                 return json.load(arquivo)
         except json.JSONDecodeError:
-            # Captures the error if the file exists but is corrupted.
-            print(f" Aviso: O arquivo {nome_arquivo} está corrompido. Iniciando com estoque vazio.")
+            print(f" [AVISO] O arquivo {nome_arquivo} está corrompido. Iniciando com estoque vazio.")
             return []
     
-    #2. If it does not exist or is empty, returns an empty list.
     return []
 
+def salvar_estoque():
+    """Salva o estado atual do estoque (lista global) no arquivo JSON."""
+    global estoque
+    # Abre o arquivo no modo de escrita ('w')
+    with open('estoque.json', 'w') as arquivo:
+        json.dump(estoque, arquivo, indent=4)
+    # print("\n [LOG] Dados salvos em estoque.json.")
+
+# Carrega o estoque em memória ao iniciar o módulo
 estoque = carregar_estoque()
 
-def salvar_estoque():
-    # Opens the 'estoque.json' file in write mode ('w')
-    # The 'w' overwrites the file with the most current data.
-    with open('estoque.json', 'w') as arquivo:
-        # Transforms the 'stock' list into JSON format and saves it to the file.
-       # 'indent=4' simply formats the JSON file to be readable.
-        json.dump(estoque, arquivo, indent=4)
-    print("\n Dados salvos em estoque.json.")
-
-def adicionar_produto(codigo, nome, preco, qtd):
-    global estoque
-
-    roupa = {'codigo': codigo, 'nome': nome, 'preco': preco, 'qtd': qtd}
-    estoque.append(roupa)
-    salvar_estoque() # Saves immediately after adding
-
-    # Returns the added item
-    return roupa
-
-def registrar_saida(codigo_saida):
-    global estoque
-
-    for item in estoque:
-        if item['codigo'] == codigo_saida:
-            if item['qtd'] > 0:
-                item['qtd'] -= 1
-                salvar_estoque() # Saved immediately after exiting
-                return {"status": "sucesso", "item": item} # Returns success and the item updated.
-            else:
-                return {"status": "erro", "mensagem": "Estoque zerado."} # Return error
-    
-    return {"status": "erro", "mensagem": "Código não encontrado."} # Return error
+# --- FUNÇÕES DE LÓGICA DE NEGÓCIOS ---
 
 def visualizar_estoque():
+    """Retorna a lista completa de produtos."""
     global estoque
     return estoque
 
-def editar_produto(codigo, novo_nome, novo_preco, nova_qtd):
+def adicionar_produto(codigo: str, nome: str, preco: float, qtd: int):
+    """
+    Função UPSERT: Adiciona um novo produto ou ATUALIZA um existente (se o código for encontrado).
+    Isto alinha com a lógica esperada pelo app.py.
+    """
     global estoque
     
+    # Procura pelo produto existente
+    item_existente = next((item for item in estoque if item['codigo'] == codigo), None)
+
+    if item_existente:
+        # Atualiza o produto existente
+        item_existente['nome'] = nome
+        item_existente['preco'] = preco
+        item_existente['qtd'] = qtd
+        produto_resultante = item_existente
+    else:
+        # Cria um novo produto e adiciona à lista
+        novo_produto = {
+            'codigo': codigo, 
+            'nome': nome, 
+            'preco': preco, 
+            'qtd': qtd
+        }
+        estoque.append(novo_produto)
+        produto_resultante = novo_produto
+        
+    salvar_estoque()
+    return produto_resultante
+
+def registrar_venda(codigo: str, quantidade: int = 1):
+    """
+    Registra a venda de 'quantidade' de um produto. 
+    (Função renomeada de 'registrar_saida' para 'registrar_venda' para casar com app.py)
+    """
+    global estoque
+
     for item in estoque:
         if item['codigo'] == codigo:
-            #1. Updates the item fields.
-            item['nome'] = novo_nome
-            item['preco'] = novo_preco
-            item['qtd'] = nova_qtd
-            
-            #2. Save the change to JSON.
-            salvar_estoque()
-            
-            #3. Returns the updated item.
-            return {"status": "sucesso", "item": item}
-            
-    # If the loop ends and the code is not found
+            if item['qtd'] >= quantidade:
+                item['qtd'] -= quantidade
+                salvar_estoque()
+                return {
+                    "status": "sucesso", 
+                    "mensagem": f"Venda de {quantidade} unidade(s) de {item['nome']} registrada.",
+                    "item": item
+                }
+            else:
+                return {"status": "erro", "mensagem": f"Estoque insuficiente. Apenas {item['qtd']} unidades restantes."}
+    
     return {"status": "erro", "mensagem": "Código não encontrado."}
 
 
-def excluir_produto(codigo_excluir):
+def excluir_produto(codigo: str):
+    """Remove um produto do estoque."""
     global estoque
     
-    # We use a temporary copy of the inventory to iterate
-    # while removing from the original list
-    for item in list(estoque):
-        if item['codigo'] == codigo_excluir:
-            estoque.remove(item)
-            salvar_estoque()
-            return {"status": "sucesso", "mensagem": f"Produto {codigo_excluir} excluído."}
-
+    # Cria uma nova lista sem o item a ser excluído
+    estoque_antes = len(estoque)
+    estoque = [item for item in estoque if item['codigo'] != codigo]
+    estoque_depois = len(estoque)
+    
+    if estoque_antes > estoque_depois:
+        salvar_estoque()
+        return {"status": "sucesso", "mensagem": f"Produto {codigo} excluído."}
+    
     return {"status": "erro", "mensagem": "Código não encontrado."}
+
+# Nota: A função 'editar_produto' foi removida, pois sua lógica foi absorvida pela função 'adicionar_produto',
+# o que simplifica o 'app.py' (lógica UPSERT).
